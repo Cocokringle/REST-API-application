@@ -1,8 +1,8 @@
 const { Contact } = require('../models/contacts')
 
 
-const listContacts = async () => {
-  return Contact.find()
+const listContacts = async (_id, skip, limit, favorite) => {
+  return Contact.find({owner: _id, favorite }, "", {skip, limit: Number(limit),}).populate("owner","_id email")
 }
 
 const getContactById = async (contactId) => {
