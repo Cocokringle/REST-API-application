@@ -7,14 +7,15 @@ const { listContacts,
   updateContact, 
   updateStatusContact } = require('../../controllers/contacts_controllers')
 const validation = require('../../middleware/validation')
+const checkToken = require('../../middleware/checkToken')
 const { schemaCreate, schemaUpdateContact, schemaUpdateFavorite } = require('../../models/contacts')
 
 
-router.get('/', listContacts)
+router.get('/', checkToken, listContacts)
 
 router.get('/:contactId', getContactById)
 
-router.post('/', validation(schemaCreate), addContact)
+router.post('/', checkToken, validation(schemaCreate), addContact)
 
 router.delete('/:contactId', removeContact)
 
