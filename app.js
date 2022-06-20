@@ -7,6 +7,7 @@ const fs = require('fs/promises')
 const uploadsDir = path.join(__dirname, "uploads")
 const avatarsDir = path.join(__dirname, "public", "avatars")
 
+const authRouter = require('./routes/api/auth')
 const contactsRouter = require('./routes/api/contacts')
 
 
@@ -37,6 +38,7 @@ const upload = multer({
   storage: multerConfig,
 })
 
+app.use('/api/users', authRouter)
 app.use('/api/contacts', contactsRouter)
 
 app.post('/api/upload', upload.single("image"), async (req, res, next) => {
