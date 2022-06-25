@@ -8,7 +8,8 @@ const gravatar = require('gravatar')
 const path = require('path')
 const fs = require('fs/promises')
 const Jimp = require('jimp')
-
+const { v4: uuidv4 } = require("uuid");
+const sendEmail = require('../helpers/sendEmail')
 
 const registerUser = async (req, res, next) => {
 
@@ -18,8 +19,17 @@ const registerUser = async (req, res, next) => {
         if(user){
             throw createError(409, 'Email in use')
         }
+        const verificationToken = uuidv4();
         const avatarURL = gravatar.url(email)
-        const result = await users.addUser(req.body, avatarURL)
+        const result = await users.addUser(req.body, avatarURL, verificationToken)
+
+        const mail = {
+            to: email,
+            subject: "Подтверждение email",
+            html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Подтвердить email</a>`
+        };
+        
+        await sendEmail(mail);
     
         res.status(201).json({
             user: {
@@ -39,13 +49,13 @@ const registerUser = async (req, res, next) => {
 const loginUser = async (req, res, next) => {
     try{
         const user = await users.getUserByEmail(req.body);
-        if(!user){
-            throw createError(401, 'Email or password is wrong')
+        if(!user || !user.verify){
+            throw createError(401, 'Email is wrong or not verify, or password is wrong')
         }
         const { password } = req.body
         const passCompare = await bcrypt.compare(password, user.password)
-        if(!passCompare){
-            throw createError(401, 'Email or password is wrong')
+        if(!passCompare || !user.verify){
+            throw createError(401, 'Email is wrong or not verify, or password is wrong')
         }
 
         const payload = {
@@ -132,6 +142,48 @@ const updateAvatar = async (req, res, next) => {
     }
 }
 
+const verifyEmail = async (req, res, next) => {
+    try {
+        const {verificationToken} = req.params;
+        const user = await users.findUserByToken(verificationToken)
+        if(!user){
+            throw createError(404, 'User not found')
+        }
+        await users.updateVerificationToken(user._id)
+        res.status(200).json('Verification successful')
+
+    } catch (e) {
+        next(e)
+    }
+}
+
+const resendEmail = async (req, res, next) => {
+    try {
+        const user = await users.getUserByEmail(req.body);
+        if(!user) {
+            throw createError(404, 'User was not found');
+        }
+
+        if(user.verify) {
+            throw createError(400, 'Verification has already been passed');
+        }
+        const link = `http://localhost:3000/api/users/verify/${user.verificationToken}`;
+        const verificationEmail = {
+            to: user.email,
+            subject: "Повторная попытка верефикации",
+            html: `<a target="_blank" href=${link}>Подтвердить email</a>`,
+        };
+        await sendEmail(verificationEmail);
+
+        return res.status(200).json({
+            code: 200,
+            message: 'Verification email sent'
+        });
+    } catch (e) {
+        next(e);
+    }
+}
+
 module.exports = {
     registerUser,
     loginUser,
@@ -139,4 +191,6 @@ module.exports = {
     logoutUser,
     updateSubscription,
     updateAvatar,
+    verifyEmail,
+    resendEmail,
 }
