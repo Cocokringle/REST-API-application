@@ -4,7 +4,14 @@ const validation = require('../../middleware/validation')
 const checkToken = require('../../middleware/checkToken')
 const upload = require('../../middleware/upload')
 const {schemaRegister, schemaLogin, schemaUpdateSub} = require('../../models/users')
-const {registerUser, loginUser, getCurrentUser, logoutUser, updateSubscription, updateAvatar} = require('../../controllers/auth_controllers')
+const {registerUser, 
+    loginUser, 
+    getCurrentUser, 
+    logoutUser, 
+    updateSubscription, 
+    updateAvatar,
+    verifyEmail,
+    resendEmail} = require('../../controllers/auth_controllers')
 
 router.post('/signup', validation(schemaRegister), registerUser)
 
@@ -17,5 +24,9 @@ router.get('/current', checkToken, getCurrentUser)
 router.patch('/', checkToken, validation(schemaUpdateSub), updateSubscription)
 
 router.patch('/avatars', checkToken, upload.single("avatar"), updateAvatar)
+
+router.get('/verify/:verificationToken', verifyEmail)
+
+router.post('/verify', resendEmail)
 
 module.exports = router
